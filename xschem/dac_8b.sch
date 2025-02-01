@@ -44,18 +44,48 @@ lab=VSS}
 N 790 -70 790 -30 {
 lab=VSS}
 N 1060 -10 1120 -10 {
-lab=out}
+lab=#net5}
 N 1120 -40 1120 -10 {
-lab=out}
+lab=#net5}
 N 880 -10 1000 -10 {
 lab=#net4}
 N 1030 -70 1100 -70 {
 lab=VSS}
 N 1030 -70 1030 -30 {
 lab=VSS}
-N 1120 -10 1250 -10 {
+N 1300 -10 1360 -10 {
+lab=#net6}
+N 1360 -40 1360 -10 {
+lab=#net6}
+N 1120 -10 1240 -10 {
+lab=#net5}
+N 1270 -70 1340 -70 {
+lab=VSS}
+N 1270 -70 1270 -30 {
+lab=VSS}
+N 1840 -10 1970 -10 {
 lab=out}
-C {devices/iopin.sym} -80 -190 0 0 {name=p2 lab=VSS}
+N 1540 -10 1600 -10 {
+lab=#net7}
+N 1600 -40 1600 -10 {
+lab=#net7}
+N 1360 -10 1480 -10 {
+lab=#net6}
+N 1510 -70 1580 -70 {
+lab=VSS}
+N 1510 -70 1510 -30 {
+lab=VSS}
+N 1780 -10 1840 -10 {
+lab=out}
+N 1840 -40 1840 -10 {
+lab=out}
+N 1600 -10 1720 -10 {
+lab=#net7}
+N 1750 -70 1820 -70 {
+lab=VSS}
+N 1750 -70 1750 -30 {
+lab=VSS}
+C {devices/iopin.sym} 40 -240 0 0 {name=p2 lab=VSS}
 C {sky130_fd_pr/res_high_po_0p35.sym} 160 -70 0 0 {name=R1
 L=40
 model=res_high_po_0p35
@@ -117,4 +147,40 @@ C {devices/ipin.sym} 400 -100 1 0 {name=p9 lab=a1}
 C {devices/ipin.sym} 640 -100 1 0 {name=p10 lab=a2}
 C {devices/ipin.sym} 880 -100 1 0 {name=p11 lab=a3}
 C {devices/ipin.sym} 1120 -100 1 0 {name=p12 lab=a4}
-C {devices/opin.sym} 1250 -10 0 0 {name=p13 lab=out}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1360 -70 0 0 {name=R11
+L=40
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1270 -10 1 0 {name=R12
+L=20
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {devices/lab_pin.sym} 1270 -70 1 0 {name=p13 sig_type=std_logic lab=VSS}
+C {devices/ipin.sym} 1360 -100 1 0 {name=p14 lab=a5}
+C {devices/opin.sym} 1970 -10 0 0 {name=p15 lab=out}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1600 -70 0 0 {name=R13
+L=40
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1510 -10 1 0 {name=R14
+L=20
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {devices/lab_pin.sym} 1510 -70 1 0 {name=p16 sig_type=std_logic lab=VSS}
+C {devices/ipin.sym} 1600 -100 1 0 {name=p17 lab=a6}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1840 -70 0 0 {name=R15
+L=40
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1750 -10 1 0 {name=R16
+L=20
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {devices/lab_pin.sym} 1750 -70 1 0 {name=p18 sig_type=std_logic lab=VSS}
+C {devices/ipin.sym} 1840 -100 1 0 {name=p19 lab=a7}
