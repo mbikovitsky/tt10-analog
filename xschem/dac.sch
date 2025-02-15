@@ -5,8 +5,7 @@ K {}
 V {}
 S {}
 E {}
-N 100 -10 160 -10 {
-lab=#net1}
+T {Extra MSB "bit" to pull the output into 0.9-1.8} 1940 -200 0 0 0.4 0.4 {}
 N 160 -40 160 -10 {
 lab=#net1}
 N 340 -10 400 -10 {
@@ -63,8 +62,6 @@ N 1270 -70 1340 -70 {
 lab=VSS}
 N 1270 -70 1270 -30 {
 lab=VSS}
-N 1840 -10 1970 -10 {
-lab=out}
 N 1540 -10 1600 -10 {
 lab=#net7}
 N 1600 -40 1600 -10 {
@@ -76,15 +73,28 @@ lab=VSS}
 N 1510 -70 1510 -30 {
 lab=VSS}
 N 1780 -10 1840 -10 {
-lab=out}
+lab=#net8}
 N 1840 -40 1840 -10 {
-lab=out}
+lab=#net8}
 N 1600 -10 1720 -10 {
 lab=#net7}
 N 1750 -70 1820 -70 {
 lab=VSS}
 N 1750 -70 1750 -30 {
 lab=VSS}
+N 2020 -10 2080 -10 {
+lab=out}
+N 2080 -40 2080 -10 {
+lab=out}
+N 1840 -10 1960 -10 {
+lab=#net8}
+N 1990 -70 2060 -70 {
+lab=VSS}
+N 1990 -70 1990 -30 {
+lab=VSS}
+N 2080 -10 2260 -10 {
+lab=out}
+N 100 -10 160 -10 {}
 C {devices/iopin.sym} 40 -240 0 0 {name=p2 lab=VSS}
 C {sky130_fd_pr/res_high_po_0p35.sym} 160 -70 0 0 {name=R1
 L=40
@@ -159,7 +169,7 @@ spiceprefix=X
 mult=1}
 C {devices/lab_pin.sym} 1270 -70 1 0 {name=p13 sig_type=std_logic lab=VSS}
 C {devices/ipin.sym} 1360 -100 1 0 {name=p14 lab=a5}
-C {devices/opin.sym} 1970 -10 0 0 {name=p15 lab=out}
+C {devices/opin.sym} 2260 -10 0 0 {name=p15 lab=out}
 C {sky130_fd_pr/res_high_po_0p35.sym} 1600 -70 0 0 {name=R13
 L=40
 model=res_high_po_0p35
@@ -184,3 +194,16 @@ spiceprefix=X
 mult=1}
 C {devices/lab_pin.sym} 1750 -70 1 0 {name=p18 sig_type=std_logic lab=VSS}
 C {devices/ipin.sym} 1840 -100 1 0 {name=p19 lab=a7}
+C {devices/iopin.sym} 40 -260 0 0 {name=p20 lab=VDD}
+C {sky130_fd_pr/res_high_po_0p35.sym} 2080 -70 0 0 {name=R17
+L=40
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {sky130_fd_pr/res_high_po_0p35.sym} 1990 -10 1 0 {name=R18
+L=20
+model=res_high_po_0p35
+spiceprefix=X
+mult=1}
+C {devices/lab_pin.sym} 1990 -70 1 0 {name=p21 sig_type=std_logic lab=VSS}
+C {devices/lab_pin.sym} 2080 -100 1 0 {name=p22 sig_type=std_logic lab=VDD}
