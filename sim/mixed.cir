@@ -1,0 +1,47 @@
+Simulation of an R2R DAC with Verilator and d_cosim (typical corner)
+
+.lib /home/ttuser/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+* https://sourceforge.net/p/ngspice/ngspice/ci/master/tree/examples/xspice/verilator/
+
+* The digital portion of the circuit is specified in compiled Verilog.
+* list the inputs and outputs
+alfsr [ i_clk i_rst_n ] [a7 a6 a5 a4 a3 a2 a1 a0] null lfsr
+.model lfsr d_cosim simulation="./build/lfsr.so"
+
+* connect the driver to the R2R dac
+
+.include "./build/dac.spice"
+.include "./build/buffer.spice"
+
+xdac vcc 0 a1 a3 a4 a5 a6 a2 a7 a0 dac_out dac
+xbuffer vcc 0 buffer_out dac_out buffer
+
+* simulate tt output path
+R1 buffer_out pin_out 500
+C1 pin_out 0 5p
+
+**** End of the DUT and its subcircuits.  Begin test circuit ****
+
+.param VCC=1.8
+Vcc vcc 0 {VCC}
+
+* Digital clock signal
+
+Aclock 0 i_clk clock
+.model clock d_osc cntl_array=[-1 1] freq_array=[25.175Meg 25.175Meg]
+
+* reset signal
+
+Vreset i_rst_n 0 PULSE {VCC} 0 40n 20p 20p 40n 0 1
+
+.control
+    * Simulate 256 cycles == (2.5 + 255) * (1 / 25.175 MHz)
+    * The first 2.5 cycles are due to how the reset and clock interact
+    tran 100p 10228.4n
+    set wr_vecnames
+    wrdata $SIM_OUTPUT i_clk i_rst_n a7 a6 a5 a4 a3 a2 a1 a0 pin_out
+    quit 0
+.endc
+
+.end
