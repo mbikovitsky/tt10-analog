@@ -1,7 +1,3 @@
-Simulation of an R2R DAC with Verilator and d_cosim (typical corner)
-
-.lib /home/ttuser/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
-
 * https://sourceforge.net/p/ngspice/ngspice/ci/master/tree/examples/xspice/verilator/
 
 * The digital portion of the circuit is specified in compiled Verilog.
@@ -43,5 +39,3 @@ Vreset i_rst_n 0 PULSE {VCC} 0 40n 20p 20p 40n 0 1
     wrdata $SIM_OUTPUT i_clk i_rst_n a7 a6 a5 a4 a3 a2 a1 a0 pin_out
     quit 0
 .endc
-
-.end

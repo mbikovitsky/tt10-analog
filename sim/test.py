@@ -6,14 +6,16 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 import pandas as pd
+import pytest
 from pytest import approx
 
 TOLERANCE = 35
 
 
-def test(tmp_path: Path) -> None:
+@pytest.mark.parametrize("corner", ["tt", "tt_mm"])
+def test(corner: str, tmp_path: Path) -> None:
     results = tmp_path / "sim.txt"
-    _run_simulation(results)
+    _run_simulation(corner, results)
     df = _parse_sim_results(results)
 
     # Find lowest value
@@ -57,9 +59,9 @@ def _edges(df: pd.DataFrame) -> Iterator[tuple[bool, float]]:
         prev_clk = clk
 
 
-def _run_simulation(results: Path) -> None:
+def _run_simulation(corner: str, results: Path) -> None:
     subprocess.run(
-        ["ngspice", "mixed.cir"],
+        ["ngspice", f"mixed_{corner}.cir"],
         env={**os.environ, "SIM_OUTPUT": str(results)},
         cwd=Path(__file__).parent,
         check=True,

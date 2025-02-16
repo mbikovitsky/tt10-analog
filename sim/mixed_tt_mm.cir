@@ -1,0 +1,7 @@
+Simulation of an R2R DAC with Verilator and d_cosim (typical monte-carlo corner)
+
+.lib /home/ttuser/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt_mm
+
+.include "./mixed.inc"
+
+.end

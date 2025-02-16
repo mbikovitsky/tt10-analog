@@ -5,3 +5,5 @@ pandas-stubs
 pandas~=2.2
 cocotb[bus]~=1.9
 pytest~=8.3
+pytest-repeat~=0.9.3
+pytest-xdist~=3.6
