@@ -3,15 +3,58 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Iterator
 
 import pandas as pd
+from pytest import approx
+
+TOLERANCE = 35
 
 
 def test(tmp_path: Path) -> None:
     results = tmp_path / "sim.txt"
     _run_simulation(results)
     df = _parse_sim_results(results)
+
+    # Find lowest value
+    assert df.iloc[0]["i_rst_n"]
+    assert df.iloc[0]["in"] == 0
+    low = df.iloc[0]["pin_out"]
+    assert isinstance(low, float)
+
+    # Find highest value
+    high = df[(df["in"] == 0xFF) & df["i_rst_n"]]["pin_out"].max()
+    assert isinstance(high, float)
+
+    step = (high - low) / 255
+
+    edges = _edges(df)
+
+    # Find the first clock after the reset is released
+    next(t for e, t in edges if e and not df.loc[t]["i_rst_n"])
+    next(t for e, t in edges if e and df.loc[t]["i_rst_n"])
+
+    # Now, for each falling clock edge, test that the output analog value
+    # is within the expected tolerance
+    for edge, time in edges:
+        if edge:
+            continue
+
+        digital = df.loc[time]["in"]
+        analog = df.loc[time]["pin_out"]
+        expected = low + digital * step
+        assert analog == approx(expected, abs=TOLERANCE * step), time
+
+
+def _edges(df: pd.DataFrame) -> Iterator[tuple[bool, float]]:
+    prev_clk = False
+    for time, row in df.iterrows():
+        clk = row["i_clk"]
+        if clk != prev_clk:
+            assert isinstance(clk, bool)
+            assert isinstance(time, float)
+            yield clk, time
+        prev_clk = clk
 
 
 def _run_simulation(results: Path) -> None:
