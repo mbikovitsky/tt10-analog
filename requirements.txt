@@ -3,6 +3,8 @@ mypy==1.13.0  # https://github.com/python/mypy/issues/18396
 pandas-stubs
 
 pandas~=2.2
+matplotlib~=3.10
+
 cocotb[bus]~=1.9
 pytest~=8.3
 pytest-repeat~=0.9.3

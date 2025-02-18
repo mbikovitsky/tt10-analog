@@ -3,13 +3,17 @@ import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Iterator
+from typing import Any, Iterable, Iterator
 
+import matplotlib
+import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
 from pytest import approx
 
 TOLERANCE = 35
+
+matplotlib.use("agg")
 
 
 @pytest.mark.parametrize("corner", ["tt", "tt_mm"])
@@ -38,14 +42,24 @@ def test(corner: str, tmp_path: Path) -> None:
 
     # Now, for each falling clock edge, test that the output analog value
     # is within the expected tolerance
+    digital: list[Any] = []
+    analog: list[Any] = []
+    expected: list[Any] = []
     for edge, time in edges:
         if edge:
             continue
 
-        digital = df.loc[time]["in"]
-        analog = df.loc[time]["pin_out"]
-        expected = low + digital * step
-        assert analog == approx(expected, abs=TOLERANCE * step), time
+        digital.append(df.loc[time]["in"])
+        analog.append(df.loc[time]["pin_out"])
+        expected.append(low + digital[-1] * step)
+        assert analog[-1] == approx(expected[-1], abs=TOLERANCE * step), time
+
+    plt.scatter(digital, analog, s=1, label="Actual")
+    plt.scatter(digital, expected, s=1, label="Expected")
+    plt.xlabel("Digital")
+    plt.ylabel("Analog")
+    plt.legend()
+    plt.savefig(tmp_path / "plot.png")
 
 
 def _edges(df: pd.DataFrame) -> Iterator[tuple[bool, float]]:
