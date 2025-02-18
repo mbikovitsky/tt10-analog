@@ -4,6 +4,7 @@ pandas-stubs
 
 pandas~=2.2
 matplotlib~=3.10
+pillow~=11.1
 
 cocotb[bus]~=1.9
 pytest~=8.3

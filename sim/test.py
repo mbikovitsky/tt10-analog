@@ -9,6 +9,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import pytest
+from PIL import Image
 from pytest import approx
 
 TOLERANCE = 35
@@ -54,12 +55,26 @@ def test(corner: str, tmp_path: Path) -> None:
         expected.append(low + digital[-1] * step)
         assert analog[-1] == approx(expected[-1], abs=TOLERANCE * step), time
 
+    # Check that the *sampled* high value is pretty close to the real high value.
+    # The sampled value may be smaller because of capacitance on the output.
+    assert analog[digital.index(255)] == approx(high, abs=5 * step)
+
+    # The LFSR doesn't output 0
+    assert 0 not in digital
+    digital.append(0)
+    analog.append(low)
+    expected.append(low)
+
     plt.scatter(digital, analog, s=1, label="Actual")
     plt.scatter(digital, expected, s=1, label="Expected")
     plt.xlabel("Digital")
     plt.ylabel("Analog")
     plt.legend()
     plt.savefig(tmp_path / "plot.png")
+
+    image: Image.Image = Image.open(Path(__file__).parent / "ttlogo_400.png")
+    image = image.point(lambda p: round((analog[digital.index(p)] - low) / step))
+    image.save(tmp_path / "image.png")
 
 
 def _edges(df: pd.DataFrame) -> Iterator[tuple[bool, float]]:
