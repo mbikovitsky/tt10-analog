@@ -33,7 +33,7 @@ C {devices/opin.sym} 650 -190 0 0 {name=p7 lab=out}
 C {sky130_fd_pr/nfet_01v8_lvt.sym} 300 -220 0 0 {name=M3
 L=0.15
 W=7
-nf=7
+nf=1
 mult=1
 ad="'int((nf+1)/2) * W/nf * 0.29'" 
 pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
@@ -48,7 +48,7 @@ C {devices/lab_pin.sym} 420 -220 2 0 {name=p10 sig_type=std_logic lab=VSS}
 C {sky130_fd_pr/nfet_01v8_lvt.sym} 300 -130 0 0 {name=M1
 L=0.15
 W=7
-nf=7
+nf=1
 mult=1
 ad="'int((nf+1)/2) * W/nf * 0.29'" 
 pd="'2*int((nf+1)/2) * (W/nf + 0.29)'"
