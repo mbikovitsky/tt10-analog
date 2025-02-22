@@ -36,6 +36,6 @@ Vreset i_rst_n 0 PULSE {VCC} 0 40n 20p 20p 40n 0 1
     * The first 2.5 cycles are due to how the reset and clock interact
     tran 100p 10228.4n
     set wr_vecnames
-    wrdata $SIM_OUTPUT i_clk i_rst_n a7 a6 a5 a4 a3 a2 a1 a0 pin_out
+    wrdata $SIM_OUTPUT i_clk i_rst_n a7 a6 a5 a4 a3 a2 a1 a0 pin_out i(vcc)
     quit 0
 .endc

@@ -23,6 +23,8 @@ def test(corner: str, tmp_path: Path) -> None:
     _run_simulation(corner, results)
     df = _parse_sim_results(results)
 
+    assert df["i(vcc)"].abs().max() < 0.002
+
     # Find lowest value
     assert df.iloc[0]["i_rst_n"]
     assert df.iloc[0]["in"] == 0
@@ -108,10 +110,10 @@ def _parse_sim_results(results: Path) -> pd.DataFrame:
         lines = iter(f)
 
         columns: list[Column] = []
-        for m in re.finditer(r"(\S+)\s+", next(lines)):
+        for m in re.finditer(r"\s(\S+)\s+(?=\s)", next(lines)):
             columns.append(Column(m.group(1), m.start(), m.end()))
 
-        # Parse data into a dict of lists: column -> list of floats
+        # Parse data into a list of lists: column -> list of floats
         data: list[list[float]] = [[] for _ in range(len(columns))]
         for line in lines:
             for i, column in enumerate(columns):
@@ -166,6 +168,7 @@ def _parse_sim_results(results: Path) -> pd.DataFrame:
                 columns=["in"],
             ),
             df["pin_out"],
+            df["i(vcc)"],
         ],
         axis="columns",
     )
