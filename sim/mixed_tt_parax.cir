@@ -1,0 +1,7 @@
+Simulation of an R2R DAC with Verilator and d_cosim (typical corner)
+
+.lib /home/ttuser/pdk/sky130A/libs.tech/ngspice/sky130.lib.spice tt
+
+.include "./mixed_parax.inc"
+
+.end

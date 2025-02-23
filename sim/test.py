@@ -18,9 +18,10 @@ matplotlib.use("agg")
 
 
 @pytest.mark.parametrize("corner", ["tt", "tt_mm"])
-def test(corner: str, tmp_path: Path) -> None:
+@pytest.mark.parametrize("post_layout", [True, False])
+def test(corner: str, post_layout: bool, tmp_path: Path) -> None:
     results = tmp_path / "sim.txt"
-    _run_simulation(corner, results)
+    _run_simulation(corner, post_layout, results)
     df = _parse_sim_results(results)
 
     assert df["i(vcc)"].abs().max() < 0.002
@@ -90,9 +91,12 @@ def _edges(df: pd.DataFrame) -> Iterator[tuple[bool, float]]:
         prev_clk = clk
 
 
-def _run_simulation(corner: str, results: Path) -> None:
+def _run_simulation(corner: str, post_layout: bool, results: Path) -> None:
     subprocess.run(
-        ["ngspice", f"mixed_{corner}.cir"],
+        [
+            "ngspice",
+            f"mixed_{corner}_parax.cir" if post_layout else f"mixed_{corner}.cir",
+        ],
         env={**os.environ, "SIM_OUTPUT": str(results)},
         cwd=Path(__file__).parent,
         check=True,
