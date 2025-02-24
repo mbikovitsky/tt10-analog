@@ -1,7 +1,7 @@
 magic
 tech sky130A
 magscale 1 2
-timestamp 1740253518
+timestamp 1740347555
 << viali >>
 rect -5990 1020 -5932 1196
 rect -5498 1020 -5438 1198
@@ -213,75 +213,75 @@ rect 6298 670 6498 886
 rect -6400 470 7384 670
 rect -6600 464 -6400 470
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR1
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -5321 0 1 3636
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR2
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -3493 0 1 3568
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR3
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -6111 0 1 3618
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR4
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -4343 0 1 1610
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR5
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -1937 0 1 3732
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR6
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -2753 0 1 1648
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR7
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -345 0 1 3746
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR8
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 -1121 0 1 1718
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR9
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 1221 0 1 3748
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR10
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 425 0 1 1720
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR11
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 2647 0 1 3866
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR12
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 1963 0 1 1824
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR13
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 3965 0 1 3928
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR14
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 3319 0 1 1928
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR15
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 6717 0 1 3934
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR16
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 6097 0 1 1918
 box -201 -2582 201 2582
 use sky130_fd_pr__res_high_po_0p35_3KK54B  XR17
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 5321 0 1 3880
 box -201 -4582 201 4582
 use sky130_fd_pr__res_high_po_0p35_QPS5FG  XR18
-timestamp 1740251180
+timestamp 1740246064
 transform 1 0 4709 0 1 1866
 box -201 -2582 201 2582
 << labels >>
