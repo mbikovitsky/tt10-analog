@@ -1,0 +1,21 @@
+SIM ?= icarus
+TOPLEVEL_LANG ?= verilog
+WAVES ?= 1
+
+VERILOG_SOURCES = $(PWD)/generated/qspi_flash_dtr.v
+
+TOPLEVEL := $(basename $(notdir $(VERILOG_SOURCES)))
+
+MODULE = test_qspi_flash_dtr
+
+RTL_DIR=$(PWD)/../rtl
+$(PWD)/generated/%.v: FORCE
+	mkdir -p $(@D)
+	PYTHONPATH=$(RTL_DIR) $(RTL_DIR)/generate_verilog.py \
+		--no-init \
+		--verilog-module-name $(TOPLEVEL) \
+		$(basename $(@F)) > $@
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
+FORCE:
