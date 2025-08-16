@@ -2,7 +2,7 @@
 strict = true
 
 [[tool.mypy.overrides]]
-module = "cocotb.*"
+module = ["cocotb.*", "amaranth.*"]
 ignore_missing_imports = true
 
 [tool.ruff.lint]

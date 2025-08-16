@@ -2,6 +2,8 @@ ruff~=0.9.6
 mypy==1.13.0  # https://github.com/python/mypy/issues/18396
 pandas-stubs
 
+amaranth[builtin-yosys]~=0.5.7
+
 pandas~=2.2
 matplotlib~=3.10
 pillow~=11.1
