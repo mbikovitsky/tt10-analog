@@ -12,6 +12,12 @@ class FlashParams:
     rsten_command: int = 0x66
     rst_command: int = 0x99
 
+    def __post_init__(self) -> None:
+        assert self.command_width_bits > 0
+        assert self.address_width_bits > 0
+        assert self.rsten_command.bit_length() <= self.command_width_bits
+        assert self.rst_command.bit_length() <= self.command_width_bits
+
 
 class QSPIFlashDTR(Component):  # type: ignore[misc]
     def __init__(self, params: FlashParams = FlashParams()) -> None:
@@ -50,54 +56,52 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
         m.d.comb += stb_f.eq(~self.o_sclk)
 
         command_cycle = Signal(range(self._params.command_width_bits), init=0)
+        command = Signal(unsigned(self._params.command_width_bits))
 
-        def send_command(
-            command_name: str,
-            command_value: int,
-            next_state: str,
-        ) -> str:
-            state_name = f"Send command {command_name} -> {next_state}"
+        def prepare_send_command(opcode: int, next_state: str) -> None:
+            m.d.sync += command_cycle.eq(0)
+            m.d.sync += command.eq(opcode)
+            m.d.sync += self.o_cs_n.eq(0)
+            m.next = next_state
 
-            with m.State(state_name):
-                with m.If(stb_f):
-                    m.d.sync += self.o_oe[0].eq(1)
-                    for i in range(self._params.command_width_bits):
-                        with m.If(command_cycle == i):
-                            m.d.sync += self.o_io[0].eq((command_value >> i) & 1)
-                    with m.If(command_cycle == self._params.command_width_bits - 1):
-                        m.d.sync += command_cycle.eq(0)
-                        m.next = next_state
-                    with m.Else():
-                        m.d.sync += command_cycle.eq(command_cycle + 1)
+        def send_command(next_state: str) -> None:
+            with m.If(stb_f):
+                m.d.sync += self.o_oe[0].eq(1)
+                # Commands are sent MSB-first
+                m.d.sync += self.o_io[0].eq(command[-1])
+                m.d.sync += command.eq(command << 1)
+                with m.If(command_cycle == self._params.command_width_bits - 1):
+                    m.d.sync += command_cycle.eq(0)
+                    m.next = next_state
+                with m.Else():
+                    m.d.sync += command_cycle.eq(command_cycle + 1)
 
-            return state_name
-
-        with m.FSM(init="Idle"):
-            with m.State("RST done"):
-                with m.If(stb_f):
-                    m.d.sync += self.o_cs_n.eq(1)
-                    m.d.sync += self.o_configure_done.eq(1)
-                    m.next = "Idle"
-
-            rst_start = send_command("RST", self._params.rst_command, "RST done")
-
-            with m.State("RSTEN done"):
-                with m.If(stb_f):
-                    m.d.sync += self.o_cs_n.eq(1)
-                # This is going to trigger on the next cycle after deasserting
-                # chip-select.
-                with m.If(stb_r & self.o_cs_n):
-                    m.d.sync += self.o_cs_n.eq(0)
-                    m.next = rst_start
-
-            rsten_start = send_command(
-                "RSTEN", self._params.rsten_command, "RSTEN done"
-            )
-
+        with m.FSM():
             with m.State("Idle"):
                 with m.If(self.i_configure):
-                    m.d.sync += self.o_cs_n.eq(0)
                     m.d.sync += self.o_configure_done.eq(0)
-                    m.next = rsten_start
+                    prepare_send_command(self._params.rsten_command, "RSTEN send")
+
+            with m.State("RSTEN send"):
+                send_command("RSTEN send done")
+
+            with m.State("RSTEN send done"):
+                with m.If(stb_f):
+                    m.d.sync += self.o_cs_n.eq(1)
+                    m.d.sync += self.o_oe[0].eq(0)
+                    m.next = "RST send start"
+
+            with m.State("RST send start"):
+                prepare_send_command(self._params.rst_command, "RST send")
+
+            with m.State("RST send"):
+                send_command("RST send done")
+
+            with m.State("RST send done"):
+                with m.If(stb_f):
+                    m.d.sync += self.o_cs_n.eq(1)
+                    m.d.sync += self.o_oe[0].eq(0)
+                    m.d.sync += self.o_configure_done.eq(1)
+                    m.next = "Idle"
 
         return m

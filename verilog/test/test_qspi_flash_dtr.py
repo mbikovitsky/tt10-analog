@@ -15,12 +15,14 @@ async def read_bytes(dut: HierarchyObject) -> bytes:
     collected: list[int] = []
     while True:
         byte = 0
-        for i in range(8):
+        for _ in range(8):
             await RisingEdge(dut.o_sclk)
             if dut.o_cs_n.value:
                 return bytes(collected)
             else:
-                byte |= dut.o_io[0].value << i
+                # Data is sent MSB-first
+                byte <<= 1
+                byte |= dut.o_io[0].value
         else:  # Didn't break out of the loop
             collected.append(byte)
 
