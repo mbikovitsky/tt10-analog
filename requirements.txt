@@ -1,5 +1,5 @@
 ruff~=0.9.6
-mypy==1.13.0  # https://github.com/python/mypy/issues/18396
+mypy~=1.17.0
 pandas-stubs
 
 amaranth[builtin-yosys]~=0.5.7
