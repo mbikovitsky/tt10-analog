@@ -2,7 +2,6 @@
 
 import argparse
 import importlib
-import importlib.util
 import inspect
 import re
 import subprocess
