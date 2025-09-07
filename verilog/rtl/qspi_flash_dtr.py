@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from amaranth import Module, Signal, unsigned
+from amaranth import Assert, Cat, Module, Signal, unsigned
 from amaranth.lib.wiring import Component, In, Out
 
 
@@ -11,12 +11,24 @@ class FlashParams:
     address_width_bits: int = 24
     rsten_command: int = 0x66
     rst_command: int = 0x99
+    read_command: int = 0xED
+    read_dummy_cycles: int = 15
 
     def __post_init__(self) -> None:
         assert self.command_width_bits > 0
+
         assert self.address_width_bits > 0
+        # This assertion makes the mode bits implementation easier.
+        # See the FSM implementation for more info.
+        assert self.address_width_bits % 8 == 0
+
         assert self.rsten_command.bit_length() <= self.command_width_bits
         assert self.rst_command.bit_length() <= self.command_width_bits
+
+        # This makes the implementation easier, since we don't need to
+        # special-case when there's only 1 dummy cycle, which overlaps
+        # with the mode bits.
+        assert self.read_dummy_cycles > 1
 
 
 class QSPIFlashDTR(Component):  # type: ignore[misc]
@@ -57,6 +69,10 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
 
         command_cycle = Signal(range(self._params.command_width_bits), init=0)
         command = Signal(unsigned(self._params.command_width_bits))
+        address_cycle = Signal(range(self._params.address_width_bits // 4))
+        address = Signal(self.i_address.shape())
+        dummy_cycle = Signal(range(self._params.read_dummy_cycles))
+        read_buffer = Signal(unsigned(4))
 
         def prepare_send_command(opcode: int, next_state: str) -> None:
             m.d.sync += command_cycle.eq(0)
@@ -78,9 +94,15 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
 
         with m.FSM():
             with m.State("Idle"):
+                m.d.sync += Assert(self.o_cs_n)
+
                 with m.If(self.i_configure):
                     m.d.sync += self.o_configure_done.eq(0)
                     prepare_send_command(self._params.rsten_command, "RSTEN send")
+                with m.Elif(self.i_read):
+                    m.d.sync += address.eq(self.i_address)
+                    m.d.sync += address_cycle.eq(0)
+                    prepare_send_command(self._params.read_command, "FRQDTR send")
 
             with m.State("RSTEN send"):
                 send_command("RSTEN send done")
@@ -103,5 +125,65 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                     m.d.sync += self.o_oe[0].eq(0)
                     m.d.sync += self.o_configure_done.eq(1)
                     m.next = "Idle"
+
+            with m.State("FRQDTR send"):
+                send_command("FRQDTR send done")
+
+            with m.State("FRQDTR send done"):
+                # This state is entered on the rising edge of the SPI clock,
+                # when the last bit of the command is sampled by the
+                # flash chip.
+                # We want to start transmitting on the falling edge, so we
+                # skip this cycle.
+                m.d.sync += Assert(stb_r)
+                m.next = "Address send"
+
+            with m.State("Address send"):
+                # The address is sent on both edges of the clock.
+                m.d.sync += self.o_oe.eq(0xF)
+                # Send the next 4 MSBits
+                m.d.sync += self.o_io.eq(address[-4:])
+                m.d.sync += address.eq(address << 4)
+                with m.If(address_cycle == self._params.address_width_bits // 4 - 1):
+                    m.d.sync += address_cycle.eq(0)
+                    # The next state assumes it's starting on a falling edge.
+                    m.d.sync += Assert(stb_r)
+                    m.next = "Mode bits"
+                with m.Else():
+                    m.d.sync += address_cycle.eq(address_cycle + 1)
+
+            with m.State("Mode bits"):
+                # Explicitly drive 0 for the mode bits, since we don't
+                # want continous reading without a command.
+                # It's easier this way.
+                m.d.sync += self.o_io.eq(0)
+
+                # We checked that the address is a multiple of 8 bits,
+                # which means that we entered this state on the falling
+                # edge of the SPI clock. On the rising edge we drive
+                # the low 4 mode bits, and move on to the next state.
+                with m.If(stb_r):
+                    m.d.sync += dummy_cycle.eq(1)
+                    m.next = "Dummy cycles"
+
+            with m.State("Dummy cycles"):
+                m.d.sync += self.o_oe.eq(0)
+                with m.If(stb_r):
+                    with m.If(dummy_cycle == self._params.read_dummy_cycles - 1):
+                        m.d.sync += dummy_cycle.eq(0)
+                        m.next = "Read"
+                    with m.Else():
+                        m.d.sync += dummy_cycle.eq(dummy_cycle + 1)
+
+            with m.State("Read"):
+                with m.If(~self.i_read):
+                    m.d.sync += self.o_cs_n.eq(1)
+                    m.next = "Idle"
+                with m.Else():
+                    with m.If(stb_r):
+                        m.d.sync += read_buffer.eq(self.i_io)
+                    with m.Else():
+                        m.d.sync += Assert(stb_f)
+                        m.d.sync += self.o_data.eq(Cat(self.i_io, read_buffer))
 
         return m
