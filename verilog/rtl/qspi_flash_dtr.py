@@ -49,6 +49,32 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
         )
         self._params = params
 
+    @property
+    def params(self) -> FlashParams:
+        return self._params
+
+    @property
+    def cycles_until_first_read_byte(self) -> int:
+        command_clocks = (
+            # The command is send in 1S mode (1 line, 1 bit per clock)
+            self.params.command_width_bits
+            # The address is sent in 4D mode (4 lines DTR), so 8 bits per clock
+            + self.params.address_width_bits // 8
+            + self.params.read_dummy_cycles
+        )
+        return (
+            # One cycle to transition from "Idle" to start sending the command
+            1
+            # The command is at the SPI clock, so 2 cycles of the main clock
+            + 2 * command_clocks
+            # The "Read" state is entered on the falling edge of the SPI clock,
+            # but the first data arrives only on the next rising edge. Skip it.
+            + 1
+            # It takes 2 clocks (1 SPI clock) for the first byte to be assembled.
+            # After this, a new byte arrives every 2 clocks.
+            + 2
+        )
+
     def elaborate(self, platform: Any) -> Module:
         m = Module()
 
@@ -74,6 +100,10 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
         dummy_cycle = Signal(range(self._params.read_dummy_cycles))
         read_buffer = Signal(unsigned(4))
 
+        # For asserting that the delay is what we expect
+        read_cycles = Signal(unsigned(16), init=0)
+        m.d.sync += read_cycles.eq(read_cycles + 1)
+
         def prepare_send_command(opcode: int, next_state: str) -> None:
             m.d.sync += command_cycle.eq(0)
             m.d.sync += command.eq(opcode)
@@ -96,6 +126,8 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
             with m.State("Idle"):
                 m.d.sync += Assert(self.o_cs_n)
 
+                m.d.sync += read_cycles.eq(0)
+
                 with m.If(self.i_configure):
                     m.d.sync += self.o_configure_done.eq(0)
                     prepare_send_command(self._params.rsten_command, "RSTEN send")
@@ -103,6 +135,8 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                     m.d.sync += address.eq(self.i_address)
                     m.d.sync += address_cycle.eq(0)
                     prepare_send_command(self._params.read_command, "FRQDTR send")
+
+                    m.d.sync += read_cycles.eq(1)
 
             with m.State("RSTEN send"):
                 send_command("RSTEN send done")
@@ -170,6 +204,15 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                 m.d.sync += self.o_oe.eq(0)
                 with m.If(stb_r):
                     with m.If(dummy_cycle == self._params.read_dummy_cycles - 1):
+                        m.d.sync += Assert(
+                            # We're on the rising edge of the last dummy cycle.
+                            # The next byte will *begin* transmitting on the next
+                            # rising edge, so after 2 main clock ticks.
+                            # After 2 more ticks (1 SPI clock), the full byte
+                            # will have been read.
+                            read_cycles == self.cycles_until_first_read_byte - 4
+                        )
+
                         m.d.sync += dummy_cycle.eq(0)
                         m.next = "Read"
                     with m.Else():
@@ -183,6 +226,13 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                     with m.If(stb_r):
                         m.d.sync += read_buffer.eq(self.i_io)
                     with m.Else():
+                        # We enter this branch also upon first transitioning
+                        # to the "Read" state, since we move immediately
+                        # after counting the last dummy cycle on the previous
+                        # rising edge. This means we sample the input lines
+                        # before there's anything meaningful on them.
+                        # This should be fine, since the user shouldn't
+                        # be sampling *us* at this point anyway.
                         m.d.sync += Assert(stb_f)
                         m.d.sync += self.o_data.eq(Cat(self.i_io, read_buffer))
 
