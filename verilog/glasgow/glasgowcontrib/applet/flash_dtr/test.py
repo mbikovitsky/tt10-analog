@@ -23,6 +23,7 @@ class State(Enum):
     READ_MODE = auto()
     DUMMY = auto()
     SEND_DATA = auto()
+    UNREACHABLE = auto()
 
 
 class FlashDTRAppletTestCase(GlasgowAppletV2TestCase, applet=FlashDTRApplet):  # type: ignore[misc, call-arg]
@@ -56,6 +57,7 @@ class FlashDTRAppletTestCase(GlasgowAppletV2TestCase, applet=FlashDTRApplet):  #
             address = 0
             address_bits = 0
             dummy_cycles = 0
+            rst_start = False
 
             async for _, _, sclk_value, cs_value, data_o, data_oe in ctx.tick().sample(
                 sclk.o, cs.o, io.o, io.oe
@@ -97,13 +99,25 @@ class FlashDTRAppletTestCase(GlasgowAppletV2TestCase, applet=FlashDTRApplet):  #
                                 command_bits
                                 == component.flash_params.command_width_bits
                             ):
-                                self.assertEqual(
-                                    command, component.flash_params.read_command
-                                )
-                                # The next trigger will be on the rising edge,
-                                # when the first bits of the address will be
-                                # sent.
-                                state = State.READ_ADDRESS
+                                match command:
+                                    case component.flash_params.rsten_command:
+                                        self.assertFalse(rst_start)
+                                        rst_start = True
+                                        # Immediately after this the chip-select
+                                        # must be deasserted.
+                                        state = State.UNREACHABLE
+                                    case component.flash_params.rst_command:
+                                        self.assertTrue(rst_start)
+                                        rst_start = False
+                                        state = State.UNREACHABLE
+                                    case component.flash_params.read_command:
+                                        self.assertFalse(rst_start)
+                                        # The next trigger will be on the rising edge,
+                                        # when the first bits of the address will be
+                                        # sent.
+                                        state = State.READ_ADDRESS
+                                    case _:
+                                        self.fail(f"Unexpected command 0x{command:X}")
 
                     case State.READ_ADDRESS:
                         if rising or falling:
@@ -152,6 +166,9 @@ class FlashDTRAppletTestCase(GlasgowAppletV2TestCase, applet=FlashDTRApplet):  #
                             address = (address + 1) % len(self._payload)
                         if falling:
                             ctx.set(io.i, self._payload[address] >> 4)
+
+                    case State.UNREACHABLE:
+                        self.fail("Unreachable state reached")
 
                     case _:
                         assert_never(state)

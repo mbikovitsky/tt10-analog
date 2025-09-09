@@ -65,7 +65,6 @@ class FlashDTRInner(Component):  # type: ignore[misc]
         m = Module()
 
         m.submodules.controller = controller = QSPIFlashDTR(self._flash_params)
-        m.d.comb += controller.i_configure.eq(0)
 
         m.submodules.sclk_buffer = sclk_buffer = Buffer(Direction.Output, self._sclk)
         m.d.comb += sclk_buffer.o.eq(controller.o_sclk)
@@ -84,6 +83,7 @@ class FlashDTRInner(Component):  # type: ignore[misc]
 
         read_wait_cycles = Signal(range(controller.cycles_until_first_read_byte))
 
+        assert controller.i_configure.init == 0
         assert controller.i_read.init == 0
         assert self.i_address.ready.init == 0
         assert self.o_done.valid.init == 0
@@ -102,8 +102,16 @@ class FlashDTRInner(Component):  # type: ignore[misc]
                 m.d.comb += self.i_address.ready.eq(1)
 
                 with m.If(self.i_address.valid):
-                    m.d.sync += controller.i_read.eq(1)
+                    m.d.sync += controller.i_configure.eq(1)
+                    # Store the address now, when the FIFO's "valid" is asserted.
+                    # We'll start the transfer later by setting "i_read".
                     m.d.sync += controller.i_address.eq(self.i_address.payload)
+                    m.next = "Wait for configure done"
+
+            with m.State("Wait for configure done"):
+                m.d.sync += controller.i_configure.eq(0)
+                with m.If(controller.o_configure_done):
+                    m.d.sync += controller.i_read.eq(1)
                     m.d.sync += read_wait_cycles.eq(0)
                     m.next = "Wait for transfer start"
 
