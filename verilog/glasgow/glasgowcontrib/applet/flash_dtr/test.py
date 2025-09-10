@@ -188,6 +188,6 @@ class FlashDTRAppletTestCase(GlasgowAppletV2TestCase, applet=FlashDTRApplet):  #
             )
         )
 
-        result = await applet.flash_dtr_iface.read(address)
-
-        self.assertEqual(result, expected)
+        for _ in range(random.randrange(1, 6)):
+            result = await applet.flash_dtr_iface.read(address)
+            self.assertEqual(result, expected)

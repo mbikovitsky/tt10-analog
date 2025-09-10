@@ -158,7 +158,11 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                     m.d.sync += self.o_cs_n.eq(1)
                     m.d.sync += self.o_oe[0].eq(0)
                     m.d.sync += self.o_configure_done.eq(1)
-                    m.next = "Idle"
+                    m.next = "Config done"
+
+            with m.State("Config done"):
+                m.d.sync += self.o_configure_done.eq(0)
+                m.next = "Idle"
 
             with m.State("FRQDTR send"):
                 send_command("FRQDTR send done")
@@ -188,7 +192,7 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
 
             with m.State("Mode bits"):
                 # Explicitly drive 0 for the mode bits, since we don't
-                # want continous reading without a command.
+                # want continuous reading without a command.
                 # It's easier this way.
                 m.d.sync += self.o_io.eq(0)
 
