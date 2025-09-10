@@ -1,7 +1,6 @@
+import argparse
 import logging
-import sys
 from argparse import ArgumentParser, Namespace
-from contextlib import nullcontext
 from typing import Any
 
 from amaranth import Module, Signal, unsigned
@@ -244,25 +243,24 @@ class FlashDTRApplet(GlasgowAppletV2):  # type: ignore[misc]
     @classmethod
     def add_run_arguments(cls, parser: ArgumentParser) -> None:
         parser.add_argument(
-            "-o", "--output", help="save output to file instead of stdout"
+            "-o",
+            "--output",
+            help="output file",
+            default="-",
+            type=argparse.FileType("wb"),
         )
+        parser.add_argument("--address", type=lambda s: int(s, 0), default=0)
         parser.add_argument("--size", type=lambda s: int(s, 0), default=1024)
 
     async def run(self, args: Namespace) -> None:
-        output = (
-            nullcontext(sys.stdout.buffer)
-            if args.output is None
-            else open(args.output, "wb")
-        )
-        with output as f:
-            remaining = args.size
-            addr = 0  # TODO: Parameter
-            while remaining:
-                data = await self.flash_dtr_iface.read(addr)
-                data = data[:remaining]
-                f.write(data)
-                remaining -= len(data)
-                addr += len(data)
+        remaining = args.size
+        addr = args.address
+        while remaining:
+            data = await self.flash_dtr_iface.read(addr)
+            data = data[:remaining]
+            args.output.write(data)
+            remaining -= len(data)
+            addr += len(data)
 
     @classmethod
     def tests(cls) -> type[GlasgowAppletV2TestCase]:
