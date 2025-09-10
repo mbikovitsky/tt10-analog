@@ -295,7 +295,9 @@ class FlashDTRInterface:
     ) -> None:
         self._logger = logger
 
-        assembly.use_pulls({sclk: PullState.Low, cs: PullState.High, io: PullState.Low})
+        assembly.use_pulls(
+            {sclk: PullState.High, cs: PullState.High, io: PullState.Low}
+        )
 
         sclk_port = assembly.add_port(sclk, "sclk")
         cs_port = assembly.add_port(cs, "cs")

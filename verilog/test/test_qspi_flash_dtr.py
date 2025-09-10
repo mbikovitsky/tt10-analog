@@ -4,7 +4,7 @@ import random
 import cocotb
 from cocotb.clock import Clock
 from cocotb.handle import HierarchyObject
-from cocotb.triggers import ClockCycles, FallingEdge, ReadOnly, RisingEdge
+from cocotb.triggers import ClockCycles, FallingEdge, First, ReadOnly, RisingEdge
 
 PIXEL_CLOCK_HZ = 25.175e6  # http://www.tinyvga.com/vga-timing/640x480@60Hz
 SYSTEM_CLOCK_HZ = PIXEL_CLOCK_HZ * 2
@@ -23,7 +23,10 @@ async def read_byte(dut: HierarchyObject, n_bits: int, dtr: bool = False) -> int
     byte = 0
 
     for _ in range(8 // n_bits):
-        await (RisingEdge(dut.o_sclk) if edge else FallingEdge(dut.o_sclk))
+        await First(
+            (RisingEdge(dut.o_sclk) if edge else FallingEdge(dut.o_sclk)),
+            RisingEdge(dut.o_cs_n),
+        )
         # Wait for signals to settle after this clock edge
         # https://github.com/cocotb/cocotb/issues/204
         await ReadOnly()

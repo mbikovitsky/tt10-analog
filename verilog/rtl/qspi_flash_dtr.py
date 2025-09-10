@@ -41,7 +41,7 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                 "i_address": In(unsigned(params.address_width_bits)),
                 "o_data": Out(unsigned(8), init=0),
                 "o_cs_n": Out(1, init=1),
-                "o_sclk": Out(1, init=0),
+                "o_sclk": Out(1, init=1),
                 "i_io": In(4),
                 "o_io": Out(4, init=0),
                 "o_oe": Out(4, init=0),  # Set all lines to input (high-Z)
@@ -63,8 +63,8 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
             + self.params.read_dummy_cycles
         )
         return (
-            # One cycle to transition from "Idle" to start sending the command
-            1
+            # Two cycles to transition from "Idle" to start sending the command
+            2
             # The command is at the SPI clock, so 2 cycles of the main clock
             + 2 * command_clocks
             # The "Read" state is entered on the falling edge of the SPI clock,
@@ -85,7 +85,7 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
         with m.If(~self.o_cs_n):
             m.d.sync += self.o_sclk.eq(~self.o_sclk)
         with m.Else():
-            m.d.sync += self.o_sclk.eq(0)
+            m.d.sync += self.o_sclk.eq(1)
 
         stb_r = Signal()
         m.d.comb += stb_r.eq(self.o_sclk)
@@ -111,7 +111,7 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
             m.next = next_state
 
         def send_command(next_state: str) -> None:
-            with m.If(stb_f):
+            with m.If(stb_r):
                 m.d.sync += self.o_oe[0].eq(1)
                 # Commands are sent MSB-first
                 m.d.sync += self.o_io[0].eq(command[-1])
@@ -142,8 +142,9 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                 send_command("RSTEN send done")
 
             with m.State("RSTEN send done"):
-                with m.If(stb_f):
+                with m.If(stb_r):
                     m.d.sync += self.o_cs_n.eq(1)
+                    m.d.sync += self.o_sclk.eq(1)
                     m.d.sync += self.o_oe[0].eq(0)
                     m.next = "RST send start"
 
@@ -154,8 +155,9 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                 send_command("RST send done")
 
             with m.State("RST send done"):
-                with m.If(stb_f):
+                with m.If(stb_r):
                     m.d.sync += self.o_cs_n.eq(1)
+                    m.d.sync += self.o_sclk.eq(1)
                     m.d.sync += self.o_oe[0].eq(0)
                     m.d.sync += self.o_configure_done.eq(1)
                     m.next = "Config done"
@@ -168,13 +170,8 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
                 send_command("FRQDTR send done")
 
             with m.State("FRQDTR send done"):
-                # This state is entered on the rising edge of the SPI clock,
-                # when the last bit of the command is sampled by the
-                # flash chip.
-                # We want to start transmitting on the falling edge, so we
-                # skip this cycle.
-                m.d.sync += Assert(stb_r)
-                m.next = "Address send"
+                with m.If(stb_r):
+                    m.next = "Address send"
 
             with m.State("Address send"):
                 # The address is sent on both edges of the clock.
@@ -225,6 +222,7 @@ class QSPIFlashDTR(Component):  # type: ignore[misc]
             with m.State("Read"):
                 with m.If(~self.i_read):
                     m.d.sync += self.o_cs_n.eq(1)
+                    m.d.sync += self.o_sclk.eq(1)
                     m.next = "Idle"
                 with m.Else():
                     with m.If(stb_r):
