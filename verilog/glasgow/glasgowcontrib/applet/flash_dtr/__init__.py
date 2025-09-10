@@ -296,7 +296,13 @@ class FlashDTRInterface:
         self._logger = logger
 
         assembly.use_pulls(
-            {sclk: PullState.High, cs: PullState.High, io: PullState.Low}
+            {
+                sclk: PullState.High,
+                cs: PullState.High,
+                # IO pins should be pulled high so that WP# and HOLD#/RESET#
+                # are not active.
+                io: PullState.High,
+            }
         )
 
         sclk_port = assembly.add_port(sclk, "sclk")
