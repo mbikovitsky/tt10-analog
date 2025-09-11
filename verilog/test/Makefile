@@ -1,13 +1,15 @@
 SIM ?= icarus
 TOPLEVEL_LANG = verilog
 
-VERILOG_SOURCES = $(PWD)/generated/qspi_flash_dtr.v
+MODULE_TO_TEST ?= qspi_flash_dtr
+
+VERILOG_SOURCES = $(PWD)/generated/$(MODULE_TO_TEST).v
 
 # VERILOG_SOURCES may be updated by the included makefiles,
 # so make sure to expand it now while we still know what it contains.
 TOPLEVEL := $(basename $(notdir $(VERILOG_SOURCES)))
 
-MODULE = test_qspi_flash_dtr
+MODULE = test_$(MODULE_TO_TEST)
 
 # Wave generation
 ifeq ($(SIM),icarus)
