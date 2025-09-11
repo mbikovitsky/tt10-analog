@@ -1,5 +1,5 @@
 [project]
-name = "glasgowcontrib-applet-flash-dtr"
+name = "glasgowcontrib-applet-flash"
 version = "0"
 
 requires-python = "~=3.11"
@@ -7,6 +7,7 @@ dependencies = ["glasgow"]
 
 [project.entry-points."glasgow.applet"]
 flash-dtr = "glasgowcontrib.applet.flash_dtr:FlashDTRApplet"
+flash = "glasgowcontrib.applet.flash:FlashApplet"
 
 [build-system]
 requires = ["pdm-backend"]
