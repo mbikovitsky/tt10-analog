@@ -107,6 +107,8 @@ def _main() -> None:
     if args.no_init:
         # Remove the \init attribute from the IL.
         # This way we can correctly simulate X values in 4-state simulators.
+        # amaranth_yosys doesn't support setattr, so we can't do the more
+        # sensible: setattr -unset init */* in the script.
         yosys_il = re.sub(
             r"^\s*attribute\s+\\init.+$",
             "",
@@ -117,10 +119,15 @@ def _main() -> None:
     # Script adapted from the code in amaranth.back.verilog
     # -sv is used to avoid this workaround: https://github.com/YosysHQ/yosys/pull/2273
     # Synthesis should get rid of it, but I don't think it's "nice" to rely on that.
+    # The "delete" command is used to remove the $check cells, which are used
+    # to implement assertions: https://yosyshq.readthedocs.io/projects/yosys/en/latest/cell/word_debug.html#debug.$check.
+    # Some synthesis tools seem to dislike them.
     yosys_script = f"""
 read_rtlil <<rtlil
 {yosys_il}
 rtlil
+
+{"delete */t:$check" if args.no_asserts else ""}
 
 proc -nomux -norom
 memory_collect
@@ -163,6 +170,11 @@ def _parse_command_line() -> argparse.Namespace:
     )
     parser.add_argument(
         "--no-init", action="store_true", help="Do not power-on-reset signals"
+    )
+    parser.add_argument(
+        "--no-asserts",
+        action="store_true",
+        help="Remove assertions from the generated Verilog",
     )
     parser.add_argument(
         "--async-reset",
