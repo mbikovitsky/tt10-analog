@@ -36,6 +36,11 @@ COMPILE_ARGS += -j 0
 BUILD_ARGS += -j
 endif
 
+# Disable warnings from Amaranth-generated Verilog
+ifeq ($(SIM),verilator)
+COMPILE_ARGS += -Wno-CASEINCOMPLETE -Wno-WIDTHTRUNC -Wno-WIDTHEXPAND
+endif
+
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
 FORCE:
