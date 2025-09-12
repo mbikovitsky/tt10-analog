@@ -3,7 +3,7 @@ TOPLEVEL_LANG = verilog
 
 MODULE_TO_TEST ?= qspi_flash_dtr
 
-VERILOG_SOURCES = $(PWD)/generated/$(MODULE_TO_TEST).v
+VERILOG_SOURCES = $(CURDIR)/generated/$(MODULE_TO_TEST).v
 
 # VERILOG_SOURCES may be updated by the included makefiles,
 # so make sure to expand it now while we still know what it contains.
@@ -21,11 +21,12 @@ EXTRA_ARGS += --trace --trace-fst --trace-structs
 SIM_ARGS += --trace-file "$(SIM_BUILD)/$(TOPLEVEL).fst"
 endif
 
-RTL_DIR=$(PWD)/../rtl
-$(PWD)/generated/%.v: FORCE
+RTL_DIR=$(CURDIR)/../rtl
+$(CURDIR)/generated/%.v: FORCE
 	mkdir -p $(@D)
 	PYTHONPATH=$(RTL_DIR) $(RTL_DIR)/generate_verilog.py \
 		--no-init \
+		--active-low-reset \
 		--verilog-module-name $(TOPLEVEL) \
 		$(basename $(@F)) > $@
 

@@ -60,9 +60,9 @@ async def test_read(dut: HierarchyObject) -> None:
     dut.i_address.value = 0
     dut.i_cipo.value = 0
 
-    dut.rst.value = 1
+    dut.rst_n.value = 0
     await ClockCycles(dut.clk, 2)
-    dut.rst.value = 0
+    dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
     address = random.randrange(1 << 24)

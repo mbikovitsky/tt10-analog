@@ -80,9 +80,9 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
     play.value = 0
     cipo.value = 1  # Pull-up :)
 
-    dut.rst.value = 1
+    dut.rst_n.value = 0
     await ClockCycles(dut.clk, 2)
-    dut.rst.value = 0
+    dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
     assert dut.uio_oe.value == 0b01001011
@@ -259,9 +259,9 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     cipo.value = 1  # Pull-up :)
     spi_ctl_read.value = 0
 
-    dut.rst.value = 1
+    dut.rst_n.value = 0
     await ClockCycles(dut.clk, 2)
-    dut.rst.value = 0
+    dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
     assert dut.uio_oe.value == 0b10001011
