@@ -226,7 +226,10 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
     played_samples += 1  # One extra was played after we deasserted "play"
 
     for _ in range(100):
-        await ClockCycles(dut.clk, 1)
+        # Sample on the falling edge, because in gate-level simulation
+        # the signals are not updated exactly on the rising edge.
+        await RisingEdge(dut.clk)
+        await FallingEdge(dut.clk)
         await ReadOnly()
 
         # We're not playing anymore, everything should be quiet
