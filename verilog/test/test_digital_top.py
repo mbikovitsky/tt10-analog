@@ -1,14 +1,16 @@
 import itertools
 import random
 from enum import Enum
-from typing import Iterable
+from typing import Any, Iterable, Iterator
 
 import cocotb
 import cocotb.utils
 from cocotb.clock import Clock
 from cocotb.handle import HierarchyObject, ModifiableObject
-from cocotb.triggers import ClockCycles, Edge, FallingEdge, First, ReadOnly, RisingEdge
+from cocotb.triggers import ClockCycles, First, ReadOnly, ReadWrite, Waitable
+from cocotb.triggers import Edge as _Edge
 from pytest import approx
+from typing_extensions import Self
 
 AUDIO_SAMPLE_RATE_HZ = 48e3  # https://en.wikipedia.org/wiki/48,000_Hz
 SYSTEM_CLOCK_HZ = AUDIO_SAMPLE_RATE_HZ * 16 * 2
@@ -48,6 +50,90 @@ class Bus:
             bit_offset += wire.value.n_bits
 
 
+# Some simulators don't support creating triggers on individual bits,
+# so we have this workaround: trigger on the whole wire, and manually
+# check the bit we want. The edge detection logic is in the Edge class.
+class AwaitableSubObject:
+    def __init__(self, bus: ModifiableObject, index: int) -> None:
+        self._bus = bus
+        self._index = index
+
+    @property
+    def value(self) -> Any:
+        return self._bus[self._index].value
+
+    @value.setter
+    def value(self, value: Any) -> None:
+        self._bus[self._index].value = value
+
+    @property
+    def _handle(self) -> ModifiableObject:
+        return self._bus[self._index]
+
+
+class Edge(Waitable):  # type: ignore[misc]
+    def __init__(self, obj: ModifiableObject | AwaitableSubObject) -> None:
+        self._obj = obj
+
+    async def _wait(self) -> Self:
+        previous = self._obj.value
+        while True:
+            # A signal may change multiple times during a time step, until it
+            # settles. This may result in spurious triggers, which are hard
+            # to debug. Instead, we implement the edge detection logic
+            # ourselves.
+            await _Edge(
+                self._obj if isinstance(self._obj, ModifiableObject) else self._obj._bus
+            )
+            await ReadWrite()
+            if self._obj.value != previous:
+                break
+            previous = self._obj.value
+        return self
+
+
+class _SpecificEdge(Waitable):  # type: ignore[misc]
+    def __init__(
+        self,
+        obj: ModifiableObject | AwaitableSubObject,
+        rising: bool,
+    ) -> None:
+        self._obj = obj
+        self._rising = rising
+
+    async def _wait(self) -> Self:
+        previous = self._obj.value
+        assert previous in (0, 1)
+
+        while True:
+            await Edge(self._obj)
+
+            current = self._obj.value
+            assert current in (0, 1)
+
+            if self._rising:
+                triggered = previous == 0 and current == 1
+            else:
+                triggered = previous == 1 and current == 0
+
+            if triggered:
+                break
+
+            previous = current
+
+        return self
+
+
+class RisingEdge(_SpecificEdge):
+    def __init__(self, obj: ModifiableObject | AwaitableSubObject) -> None:
+        super().__init__(obj, True)
+
+
+class FallingEdge(_SpecificEdge):
+    def __init__(self, obj: ModifiableObject | AwaitableSubObject) -> None:
+        super().__init__(obj, False)
+
+
 @cocotb.test()  # type: ignore
 async def test_player_left(dut: HierarchyObject) -> None:
     await _test_player(dut, True)
@@ -66,15 +152,15 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
 
     # Relevant signals for this test
     play = dut.ui_in[0]
-    busy = dut.uio_out[6]
+    busy = AwaitableSubObject(dut.uio_out, 6)
     digital_out = dut.o_digital
     digital_pt = dut.uo_out
 
     # SPI signals
-    cs_n = dut.uio_out[0]
+    cs_n = AwaitableSubObject(dut.uio_out, 0)
     copi = dut.uio_out[1]
     cipo = dut.uio_in[2]
-    sclk = dut.uio_out[3]
+    sclk = AwaitableSubObject(dut.uio_out, 3)
 
     mode.value = Mode.PRODUCTION_L.value if left_pt else Mode.PRODUCTION_R.value
     play.value = 0
@@ -155,16 +241,26 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
 
 
 def _generate_samples(count: int) -> list[tuple[int, int]]:
-    return [(random.randrange(1 << 8), random.randrange(1 << 8)) for _ in range(count)]
+    # We need to be able to detect channel value changes, so make sure
+    # no two adjacent samples are equal
+
+    def generate_channel() -> Iterator[int]:
+        last_sample = 0
+        for _ in range(count):
+            while (sample := random.randrange(1 << 8)) == last_sample:
+                pass
+            yield sample
+
+    return list(zip(generate_channel(), generate_channel(), strict=True))
 
 
 async def _spi_peripheral(
     *,
     memory: bytes,
-    cs_n: ModifiableObject,
+    cs_n: ModifiableObject | AwaitableSubObject,
     copi: ModifiableObject,
     cipo: ModifiableObject,
-    sclk: ModifiableObject,
+    sclk: ModifiableObject | AwaitableSubObject,
 ) -> None:
     """
     Emulates a SPI flash peripheral. Responds to plain read commands.
@@ -203,7 +299,7 @@ async def _spi_peripheral(
     async def send_bytes(data: Iterable[int]) -> None:
         for byte in itertools.cycle(data):
             for i in reversed(range(8)):
-                await RisingEdge(sclk)
+                await First(FallingEdge(sclk), RisingEdge(cs_n))
 
                 if cs_n.value:
                     return
@@ -247,13 +343,13 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     digital_out = dut.o_digital
     spi_ctl_read = dut.uio_in[6]
     spi_ctl_data_out = dut.uo_out
-    spi_ctl_data_valid = dut.uio_out[7]
+    spi_ctl_data_valid = AwaitableSubObject(dut.uio_out, 7)
 
     # SPI signals
-    cs_n = dut.uio_out[0]
+    cs_n = AwaitableSubObject(dut.uio_out, 0)
     copi = dut.uio_out[1]
     cipo = dut.uio_in[2]
-    sclk = dut.uio_out[3]
+    sclk = AwaitableSubObject(dut.uio_out, 3)
 
     mode.value = Mode.DEBUG_DAC_L_PT.value if left_pt else Mode.DEBUG_DAC_R_PT.value
     cipo.value = 1  # Pull-up :)
