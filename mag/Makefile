@@ -2,6 +2,8 @@ PROJECT_NAME ?= tt_um_mbikovitsky_audio_player
 MAGIC_RC := $(PDK_ROOT)/sky130A/libs.tech/magic/sky130A.magicrc
 TEMPLATE_FILE := tt_analog_1x2.def
 #TEMPLATE_FILE := tt_analog_1x2_3v3.def
+BUILD_DIR := $(CURDIR)/build
+SCHEM_DIR := $(CURDIR)/../xschem
 
 .PHONY: lvs magic start
 
@@ -32,7 +34,17 @@ $(PROJECT_NAME).sim.spice: $(PROJECT_NAME).mag
 	magic -rcfile $(MAGIC_RC) -noconsole -dnull tcl/extract_for_sim.tcl $(PROJECT_NAME)
 	rm -f *.ext
 
-lvs.report: $(PROJECT_NAME).lvs.spice ../src/project.v
+LVS_DEPENDS = \
+	$(PROJECT_NAME).lvs.spice \
+	$(BUILD_DIR)/dac.spice \
+	$(BUILD_DIR)/buffer.spice \
+	../src/project.v \
+	../verilog/gl/digital_top.v
+
+$(BUILD_DIR)/%.spice: $(SCHEM_DIR)/%.sch
+	cd $(SCHEM_DIR) && xschem $(<F) --no_x --command 'set local_netlist_dir 0; set netlist_dir $(abspath $(BUILD_DIR)); set netlist_type spice; xschem netlist; exit'
+
+lvs.report: $(LVS_DEPENDS)
 	netgen -batch eval "set project $(PROJECT_NAME) ; source tcl/lvs_netgen.tcl"
 
 lvs: lvs.report
@@ -69,3 +81,4 @@ update_gds:
 
 clean:
 	rm -f lvs.report *.lvs.spice *.nodes *.sim.spice *.sim
+	rm -rf $(BUILD_DIR)
