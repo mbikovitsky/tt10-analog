@@ -7,7 +7,7 @@ import cocotb
 import cocotb.utils
 from cocotb.clock import Clock
 from cocotb.handle import HierarchyObject, ModifiableObject
-from cocotb.triggers import ClockCycles, First, ReadOnly, ReadWrite, Waitable
+from cocotb.triggers import ClockCycles, First, ReadOnly, ReadWrite, Timer, Waitable
 from cocotb.triggers import Edge as _Edge
 from pytest import approx
 from typing_extensions import Self
@@ -340,9 +340,6 @@ async def test_debug_pt_right(dut: HierarchyObject) -> None:
 
 
 async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
-    clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
-    cocotb.start_soon(clock.start())
-
     mode = Bus(dut.uio_in[i] for i in range(6, 8))
 
     # Relevant signals for this test
@@ -363,20 +360,20 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     spi_ctl_read.value = 0
 
     dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 2)
-    dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
+    await Timer(100, units="ns")
 
     assert dut.uio_oe.value == 0b00011011
 
     #
     # Test passthrough to the DACs.
     # The disabled DAC should be fed 0.
+    # This should work even without a clock and while the design
+    # is in reset, since all the logic is combinational.
     #
 
     pt_value = random.randrange(1 << 8)
     pt_in.value = pt_value
-    await ClockCycles(dut.clk, 1)
+    await Timer(1, units="ns")
     if left_pt:
         assert digital_out.value == pt_value
     else:
@@ -385,6 +382,15 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     #
     # Test SPI controller passthrough
     #
+
+    clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
+    cocotb.start_soon(clock.start())
+
+    # The reset is synchronous to the clock, so wait until the rising edge
+    # to release it.
+    await ClockCycles(dut.clk, 2)
+    dut.rst_n.value = 1
+    await ClockCycles(dut.clk, 2)
 
     memory = random.randbytes(16 * 1024 * 1024)  # Size of IS25WP128 flash chip
 
