@@ -148,11 +148,11 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
     clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
     cocotb.start_soon(clock.start())
 
-    mode = Bus(dut.uio_in[i] for i in range(4, 6))
+    mode = Bus(dut.uio_in[i] for i in range(6, 8))
 
     # Relevant signals for this test
     play = dut.ui_in[0]
-    busy = AwaitableSubObject(dut.uio_out, 6)
+    busy = AwaitableSubObject(dut.uio_out, 4)
     digital_out = dut.o_digital
     digital_pt = dut.uo_out
 
@@ -171,7 +171,11 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
-    assert dut.uio_oe.value == 0b01001011
+    assert dut.uio_oe.value == 0b00111011
+
+    # uio[5] is connected to IO3 on the QSPI Pmod, which is the HOLD# / RESET#
+    # pin on an SPI flash. We need it pulled high.
+    assert dut.uio_out[5].value == 1
 
     # Everything should be idle before we start
     assert not busy.value
@@ -339,14 +343,14 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
     cocotb.start_soon(clock.start())
 
-    mode = Bus(dut.uio_in[i] for i in range(4, 6))
+    mode = Bus(dut.uio_in[i] for i in range(6, 8))
 
     # Relevant signals for this test
     pt_in = dut.ui_in
     digital_out = dut.o_digital
-    spi_ctl_read = dut.uio_in[6]
+    spi_ctl_read = dut.uio_in[5]
     spi_ctl_data_out = dut.uo_out
-    spi_ctl_data_valid = AwaitableSubObject(dut.uio_out, 7)
+    spi_ctl_data_valid = AwaitableSubObject(dut.uio_out, 4)
 
     # SPI signals
     cs_n = AwaitableSubObject(dut.uio_out, 0)
@@ -363,7 +367,7 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     dut.rst_n.value = 1
     await ClockCycles(dut.clk, 1)
 
-    assert dut.uio_oe.value == 0b10001011
+    assert dut.uio_oe.value == 0b00011011
 
     #
     # Test passthrough to the DACs.

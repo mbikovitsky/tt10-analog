@@ -66,12 +66,18 @@ class DigitalTop(Component):  # type: ignore[misc]
         mode = Signal(Mode)
         assert mode.width == 2
         m.d.comb += [
-            mode.eq(self.uio_in[4:6]),
-            self.uio_oe[4:6].eq(0),
+            mode.eq(self.uio_in[6:8]),
+            self.uio_oe[6:8].eq(0),
         ]
 
         with m.Switch(mode):
             with m.Case(Mode.PRODUCTION_L, Mode.PRODUCTION_R):
+                # Pull up IO3 on the QSPI Pmod, which is the HOLD# / RESET# pin
+                m.d.comb += [
+                    self.uio_out[5].eq(1),
+                    self.uio_oe[5].eq(1)
+                ]
+
                 # Player <-> SPI controller connection
                 m.d.comb += [
                     spi_flash.i_read.eq(player.o_spi_read),
@@ -89,8 +95,8 @@ class DigitalTop(Component):  # type: ignore[misc]
 
                 # Busy signal
                 m.d.comb += [
-                    self.uio_out[6].eq(player.o_busy),
-                    self.uio_oe[6].eq(1),
+                    self.uio_out[4].eq(player.o_busy),
+                    self.uio_oe[4].eq(1),
                 ]
 
                 # Passthrough of a selected audio channel
@@ -110,12 +116,12 @@ class DigitalTop(Component):  # type: ignore[misc]
 
                 # Passthrough of SPI controller signals
                 m.d.comb += [
-                    spi_flash.i_read.eq(self.uio_in[6]),
-                    self.uio_oe[6].eq(0),
+                    spi_flash.i_read.eq(self.uio_in[5]),
+                    self.uio_oe[5].eq(0),
                     spi_flash.i_address.eq(self.ui_in),
                     self.uo_out.eq(spi_flash.o_data),
-                    self.uio_out[7].eq(spi_flash.o_data_valid),
-                    self.uio_oe[7].eq(1),
+                    self.uio_out[4].eq(spi_flash.o_data_valid),
+                    self.uio_oe[4].eq(1),
                 ]
 
             # Commented-out because this results in an empty always_comb
