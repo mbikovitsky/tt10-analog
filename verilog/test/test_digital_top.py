@@ -145,9 +145,6 @@ async def test_player_right(dut: HierarchyObject) -> None:
 
 
 async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
-    clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
-    cocotb.start_soon(clock.start())
-
     mode = Bus(dut.uio_in[i] for i in range(6, 8))
 
     # Relevant signals for this test
@@ -167,11 +164,18 @@ async def _test_player(dut: HierarchyObject, left_pt: bool) -> None:
     cipo.value = 1  # Pull-up :)
 
     dut.rst_n.value = 0
+    await Timer(100, units="ns")
+
+    cocotb.start_soon(_check_signal_constant(dut.uio_oe, 0b00111011))
+
+    clock = Clock(dut.clk, round(1e12 / SYSTEM_CLOCK_HZ), units="ps")
+    cocotb.start_soon(clock.start())
+
+    # The reset is synchronous to the clock, so wait until the rising edge
+    # to release it.
     await ClockCycles(dut.clk, 2)
     dut.rst_n.value = 1
-    await ClockCycles(dut.clk, 1)
-
-    assert dut.uio_oe.value == 0b00111011
+    await ClockCycles(dut.clk, 2)
 
     # uio[5] is connected to IO3 on the QSPI Pmod, which is the HOLD# / RESET#
     # pin on an SPI flash. We need it pulled high.
@@ -362,7 +366,7 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
     dut.rst_n.value = 0
     await Timer(100, units="ns")
 
-    assert dut.uio_oe.value == 0b00011011
+    cocotb.start_soon(_check_signal_constant(dut.uio_oe, 0b00011011))
 
     #
     # Test passthrough to the DACs.
@@ -414,3 +418,15 @@ async def _test_debug(dut: HierarchyObject, left_pt: bool) -> None:
         await RisingEdge(spi_ctl_data_valid)
         await ReadOnly()
         assert spi_ctl_data_out.value == memory[(address + i) % len(memory)]
+
+
+async def _check_signal_constant(signal: ModifiableObject, value: int) -> None:
+    assert signal.value == value
+
+    # This shouldn't fire if the signal doesn't change.
+    # We're using the base trigger and not our implementation, because we want
+    # to detect signal changes in the middle of a time step, which indicate
+    # the signal is probably not really constant.
+    await _Edge(signal)
+
+    assert False, f"Signal {signal} changed"
