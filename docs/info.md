@@ -18,8 +18,13 @@ ffmpeg -i /path/to/input/file -c:a pcm_u8 -f u8 /path/to/output/file
 After flashing this to the chip, do the following:
 
 1. Set `uio[7]` high.
-2. Set `ui[0]` high to start playback.
-3. Set `ui[0]` low to pause.
+2. Provide a clock signal to the chip according to the following formula:
+   `clock_hz = sample_rate_hz * 16 * 2`.
+   - For example, if the audio is at 44.1 kHz, supply a clock of 1411.2 kHz.
+   - For 48 kHz, supply a clock of 1536 kHz.
+3. Pull the `rst_n` signal low, then pull it high.
+4. Set `ui[0]` high to start playback.
+5. Set `ui[0]` low to pause.
    Setting it high it again will resume from the same position.
 
 In this mode, one of the two audio channels is also mirrored
