@@ -8,10 +8,16 @@ from spi_flash import FlashParams, SPIFlash
 
 
 class Mode(Enum):
-    PRODUCTION_L = 0
-    PRODUCTION_R = 1
-    DEBUG_DAC_L_PT = 2
-    DEBUG_DAC_R_PT = 3
+    DEBUG_DAC_R_PT = 0
+    DEBUG_DAC_L_PT = 1
+    PRODUCTION_R = 2
+    # We're using uio[7:6] for the mode-select. When using the QSPI Pmod,
+    # these pins are connected to the CS# of the SRAM chips through a pull-up.
+    # To be compatible with the Pmod, we make it so the production mode
+    # works when both of these lines are pulled up.
+    # To use the debug mode, either cut the traces on the Pmod, or don't use
+    # it at all :)
+    PRODUCTION_L = 3
 
 
 class DigitalTop(Component):  # type: ignore[misc]

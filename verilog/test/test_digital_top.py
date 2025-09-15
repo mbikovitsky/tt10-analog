@@ -18,10 +18,10 @@ SYSTEM_CLOCK_HZ = AUDIO_SAMPLE_RATE_HZ * 16 * 2
 
 # NOTE: Keep in sync with the RTL
 class Mode(Enum):
-    PRODUCTION_L = 0
-    PRODUCTION_R = 1
-    DEBUG_DAC_L_PT = 2
-    DEBUG_DAC_R_PT = 3
+    DEBUG_DAC_R_PT = 0
+    DEBUG_DAC_L_PT = 1
+    PRODUCTION_R = 2
+    PRODUCTION_L = 3
 
 
 class Bus:
